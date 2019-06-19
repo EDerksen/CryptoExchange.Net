@@ -90,23 +90,45 @@ namespace CryptoExchange.Net.Sockets
 
         public void ProcessMessage(string data)
         {
-            log.Write(LogVerbosity.Debug, $"Socket {Socket.Id} received data: " + data);
-            var tokenData = data.ToJToken(log);
-            if (tokenData == null)
-                return;
-
-            foreach (var pendingRequest in pendingRequests.ToList())
+            try
             {
-                if (pendingRequest.Check(tokenData))
+                log.Write(LogVerbosity.Debug, $"Socket {Socket.Id} received data: " + data);
+                var tokenData = data.ToJToken(log);
+                if (tokenData == null)
                 {
-                    pendingRequests.Remove(pendingRequest);
+                    log.Write(LogVerbosity.Warning, "tokenData is null");
                     return;
                 }
-            }
 
-            if (!HandleData(tokenData))
+                if (pendingRequests == null)
+                {
+                    log.Write(LogVerbosity.Warning, "pendingRequests is null");
+                    return;
+                }
+
+                foreach (var pendingRequest in pendingRequests.ToList())
+                {
+                    if(pendingRequest == null)
+                    {
+                        log.Write(LogVerbosity.Warning, "pendingRequest is null");
+                        pendingRequests.Remove(pendingRequest);
+                    }
+
+                    if (pendingRequest.Check(tokenData))
+                    {
+                        pendingRequests.Remove(pendingRequest);
+                        return;
+                    }
+                }
+
+                if (!HandleData(tokenData))
+                {
+                    log.Write(LogVerbosity.Debug, "Message not handled: " + tokenData);
+                }
+            }
+            catch(Exception exc)
             {
-                log.Write(LogVerbosity.Debug, "Message not handled: " + tokenData);
+                log.Write(LogVerbosity.Error, $"Error occured while processing message: " + exc.Message);
             }
         }
 
