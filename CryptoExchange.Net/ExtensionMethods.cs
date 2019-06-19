@@ -1,11 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Runtime.InteropServices;
 using System.Security;
 using System.Threading;
 using System.Threading.Tasks;
+using CryptoExchange.Net.Logging;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace CryptoExchange.Net
 {
@@ -114,7 +118,7 @@ namespace CryptoExchange.Net
                 tokenRegistration = cancellationToken.Register(
                     state => ((TaskCompletionSource<bool>)state).TrySetCanceled(),
                     tcs);
-                return await tcs.Task;
+                return await tcs.Task.ConfigureAwait(false);
             }
             finally
             {
@@ -126,6 +130,31 @@ namespace CryptoExchange.Net
         public static Task<bool> WaitOneAsync(this WaitHandle handle, TimeSpan timeout)
         {
             return handle.WaitOneAsync((int)timeout.TotalMilliseconds, CancellationToken.None);
+        }
+
+        public static JToken ToJToken(this string stringData, Log log = null)
+        {
+            if (string.IsNullOrEmpty(stringData))
+                return null;
+
+            try
+            {
+                return JToken.Parse(stringData);
+            }
+            catch (JsonReaderException jre)
+            {
+                var info = $"Deserialize JsonReaderException: {jre.Message}, Path: {jre.Path}, LineNumber: {jre.LineNumber}, LinePosition: {jre.LinePosition}. Data: {stringData}";
+                log?.Write(LogVerbosity.Error, info);
+                if (log == null) Debug.WriteLine(LogVerbosity.Error, info);
+                return null;
+            }
+            catch (JsonSerializationException jse)
+            {
+                var info = $"Deserialize JsonSerializationException: {jse.Message}. Data: {stringData}";
+                log?.Write(LogVerbosity.Error, info);
+                if (log == null) Debug.WriteLine(LogVerbosity.Error, info);
+                return null;
+            }
         }
     }
 }
