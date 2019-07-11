@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -9,6 +10,9 @@ using CryptoExchange.Net.Sockets;
 
 namespace CryptoExchange.Net.OrderBook
 {
+    /// <summary>
+    /// Base for order book implementations
+    /// </summary>
     public abstract class SymbolOrderBook: IDisposable
     {
         protected readonly List<ProcessBufferEntry> processBuffer;
@@ -112,28 +116,33 @@ namespace CryptoExchange.Net.OrderBook
             }
         }
 
-        protected SymbolOrderBook(string id, string symbol, bool sequencesAreConsecutive, LogVerbosity logVerbosity, IEnumerable<TextWriter> logWriters)
+        protected SymbolOrderBook(string symbol, OrderBookOptions options)
         {
-            this.id = id;
+            id = options.OrderBookName;
             processBuffer = new List<ProcessBufferEntry>();
-            this.sequencesAreConsecutive = sequencesAreConsecutive;
+            sequencesAreConsecutive = options.SequenceNumbersAreConsecutive;
             Symbol = symbol;
             Status = OrderBookStatus.Disconnected;
 
             asks = new SortedList<decimal, OrderBookEntry>();
             bids = new SortedList<decimal, OrderBookEntry>(new DescComparer<decimal>());
 
-            log = new Log { Level = logVerbosity };
-            if (logWriters == null)
-                logWriters = new List<TextWriter> { new DebugTextWriter() };
-            log.UpdateWriters(logWriters.ToList());
+            log = new Log { Level = options.LogVerbosity };
+            var writers = options.LogWriters ?? new List<TextWriter> { new DebugTextWriter() };
+            log.UpdateWriters(writers.ToList());
         }
 
         /// <summary>
         /// Start connecting and synchronizing the order book
         /// </summary>
         /// <returns></returns>
-        public async Task<CallResult<bool>> Start()
+        public CallResult<bool> Start() => StartAsync().Result;
+
+        /// <summary>
+        /// Start connecting and synchronizing the order book
+        /// </summary>
+        /// <returns></returns>
+        public async Task<CallResult<bool>> StartAsync()
         {
             Status = OrderBookStatus.Connecting;
             var startResult = await DoStart().ConfigureAwait(false);
@@ -177,10 +186,16 @@ namespace CryptoExchange.Net.OrderBook
         /// Stop syncing the order book
         /// </summary>
         /// <returns></returns>
-        public Task Stop()
+        public void Stop() => StopAsync().Wait();
+
+        /// <summary>
+        /// Stop syncing the order book
+        /// </summary>
+        /// <returns></returns>
+        public async Task StopAsync()
         {
             Status = OrderBookStatus.Disconnected;
-            return subscription.Close();
+            await subscription.Close().ConfigureAwait(false);
         }
 
         protected abstract Task<CallResult<UpdateSubscription>> DoStart();
@@ -210,7 +225,7 @@ namespace CryptoExchange.Net.OrderBook
 
                 CheckProcessBuffer();
                 bookSet = true;
-                log.Write(LogVerbosity.Debug, $"{id} order book {Symbol} initial order book set");
+                log.Write(LogVerbosity.Debug, $"{id} order book {Symbol} data set: {BidCount} bids, {AskCount} asks");
             }
         }
 
@@ -297,6 +312,24 @@ namespace CryptoExchange.Net.OrderBook
         }
 
         public abstract void Dispose();
+
+        public override string ToString()
+        {
+            return ToString(3);
+        }
+
+        public string ToString(int numberOfEntries)
+        {
+            var result = "";
+            result += $"Asks ({AskCount}): {Environment.NewLine}";
+            foreach (var entry in Asks.Take(numberOfEntries).Reverse())
+                result += $"  {entry.Price.ToString(CultureInfo.InvariantCulture).PadLeft(8)} | {entry.Quantity.ToString(CultureInfo.InvariantCulture).PadRight(8)}{Environment.NewLine}";
+
+            result += $"Bids ({BidCount}): {Environment.NewLine}";
+            foreach (var entry in Bids.Take(numberOfEntries))
+                result += $"  {entry.Price.ToString(CultureInfo.InvariantCulture).PadLeft(8)} | {entry.Quantity.ToString(CultureInfo.InvariantCulture).PadRight(8)}{Environment.NewLine}";
+            return result;
+        }
     }
 
     internal class DescComparer<T> : IComparer<T>
