@@ -55,10 +55,12 @@ Implementations from third parties
 </tr>
 </table>
 
-Planned implementations (no timeline):
+Planned implementations (no timeline or specific order):
 * BitMEX
 * Bitstamp
 * CoinFalcon
+* Kraken
+* Binance DEX
 
 ## Donations
 Donations are greatly appreciated and a motivation to keep improving.
@@ -162,11 +164,12 @@ client.Unsubscribe(subResult.Data);
 To unsubscribe all subscriptions the `client.UnsubscribeAll()` method can be used.
 
 ## Order books
-The library implementations provide a `SymbolOrderBook` implementation. This implementation can be used to keep an updated order book without having to think about synchronizing it. This example is from the Binance.Net library, but is the same for others:
+The library implementations provide a `SymbolOrderBook` implementation. This implementation can be used to keep an updated order book without having to think about synchronizing it. This example is from the Binance.Net library, 
+but the implementation is similar for each library:
 ````C#
-var orderBook = new BinanceSymbolOrderBook("BTCUSDT", 100);
+var orderBook = new BinanceSymbolOrderBook("BTCUSDT", new BinanceOrderBookOptions(20));
 orderBook.OnStatusChange += (oldStatus, newStatus) => Console.WriteLine($"Book state changed from {oldStatus} to {newStatus}");
-var startResult = await orderBook.Start();
+var startResult = await orderBook.StartAsync();
 if(!startResult.Success)
 {
 	Console.WriteLine("Error starting order book synchronization: " + startResult.Error);
@@ -178,6 +181,8 @@ var askCount = orderBook.AskCount; // The current number of asks in the book
 var bidCount = orderBook.BidCount; // The current number of bids in the book
 var asks = orderBook.Asks; // All asks
 var bids = orderBook.Bids; // All bids
+var bestBid = orderBook.BestBid; // The best bid available in the book
+var bestAsk = orderBook.BestAsk; // The best ask available in the book
 
 ````
 The order book will automatically reconnect when the connection is lost and resync if it detects the sequence is off. Make sure to check the Status property to see it the book is currently in sync.
@@ -185,6 +190,12 @@ The order book will automatically reconnect when the connection is lost and resy
 To stop synchronizing an order book use the `Stop` method.
 
 ## Release notes
+* Version 2.1.5 - 09 jul 2019
+	* Updated SymbolOrderBook
+
+* Version 2.1.4 - 24 jun 2019
+	* Added checks for json deserialization issues
+
 * Version 2.1.3 - 16 may 2019
 	* Refactored SymbolOrderBook
 	* Added BestBid/BestAsk properties for order book
