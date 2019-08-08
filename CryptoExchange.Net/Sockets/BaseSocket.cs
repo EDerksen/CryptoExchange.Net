@@ -13,6 +13,9 @@ using WebSocket4Net;
 
 namespace CryptoExchange.Net.Sockets
 {
+    /// <summary>
+    /// Socket implementation
+    /// </summary>
     public class BaseSocket: IWebsocket
     {
         internal static int lastStreamId;
