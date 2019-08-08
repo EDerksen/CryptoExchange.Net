@@ -11,25 +11,58 @@ using Newtonsoft.Json.Linq;
 
 namespace CryptoExchange.Net.Sockets
 {
+    /// <summary>
+    /// Socket connecting
+    /// </summary>
     public class SocketConnection
     {
+        /// <summary>
+        /// Connection lost event
+        /// </summary>
         public event Action ConnectionLost;
+        /// <summary>
+        /// Connecting restored event
+        /// </summary>
         public event Action<TimeSpan> ConnectionRestored;
+        /// <summary>
+        /// Connecting closed event
+        /// </summary>
         public event Action Closed;
 
+        /// <summary>
+        /// The amount of handlers
+        /// </summary>
         public int HandlerCount
         {
             get { lock (handlersLock)
                 return handlers.Count(h => h.UserSubscription); }
         }
 
+        /// <summary>
+        /// If connection is authenticated
+        /// </summary>
         public bool Authenticated { get; set; }
+        /// <summary>
+        /// If connection is made
+        /// </summary>
         public bool Connected { get; private set; }
 
-
+        /// <summary>
+        /// The socket
+        /// </summary>
         public IWebsocket Socket { get; set; }
+        /// <summary>
+        /// If should reconnect upon closing
+        /// </summary>
         public bool ShouldReconnect { get; set; }
+
+        /// <summary>
+        /// Time of disconnecting
+        /// </summary>
         public DateTime? DisconnectTime { get; set; }
+        /// <summary>
+        /// If activity is paused
+        /// </summary>
         public bool PausedActivity { get; set; }
 
         internal readonly List<SocketSubscription> handlers;
@@ -41,6 +74,11 @@ namespace CryptoExchange.Net.Sockets
 
         private readonly List<PendingRequest> pendingRequests;
 
+        /// <summary>
+        /// New socket connection
+        /// </summary>
+        /// <param name="client">The socket client</param>
+        /// <param name="socket">The socket</param>
         public SocketConnection(SocketClient client, IWebsocket socket)
         {
             log = client.log;
@@ -72,6 +110,13 @@ namespace CryptoExchange.Net.Sockets
             };
         }
 
+        /// <summary>
+        /// Add a handler
+        /// </summary>
+        /// <param name="request">The request object</param>
+        /// <param name="userSubscription">If it is a user subscription or a generic handler</param>
+        /// <param name="dataHandler">The data handler</param>
+        /// <returns></returns>
         public SocketSubscription AddHandler(object request, bool userSubscription, Action<SocketConnection, JToken> dataHandler)
         {
             var handler = new SocketSubscription(null, request, userSubscription, dataHandler);
@@ -80,6 +125,14 @@ namespace CryptoExchange.Net.Sockets
             return handler;
         }
 
+        /// <summary>
+        /// Add a handler
+        /// </summary>
+        /// <param name="identifier">The identifier of the handler</param>
+        /// <param name="userSubscription">If it is a user subscription or a generic handler</param>
+        /// <param name="dataHandler">The data handler</param>
+        /// <returns></returns>
+        /// <returns></returns>
         public SocketSubscription AddHandler(string identifier, bool userSubscription, Action<SocketConnection, JToken> dataHandler)
         {
             var handler = new SocketSubscription(identifier, null, userSubscription, dataHandler);
@@ -88,49 +141,45 @@ namespace CryptoExchange.Net.Sockets
             return handler;
         }
 
-        public void ProcessMessage(string data)
+        private void ProcessMessage(string data)
         {
-            try
+            log.Write(LogVerbosity.Debug, $"Socket {Socket.Id} received data: " + data);
+            var tokenData = data.ToJToken(log);
+            if (tokenData == null)
+                return;
+
+            var handledResponse = false;
+            foreach (var pendingRequest in pendingRequests.ToList())
             {
-                log.Write(LogVerbosity.Debug, $"Socket {Socket.Id} received data: " + data);
-                var tokenData = data.ToJToken(log);
-                if (tokenData == null)
+                if (pendingRequest.Check(tokenData))
                 {
-                    log.Write(LogVerbosity.Warning, "tokenData is null");
-                    return;
-                }
-
-                if (pendingRequests == null)
-                {
-                    log.Write(LogVerbosity.Warning, "pendingRequests is null");
-                    return;
-                }
-
-                foreach (var pendingRequest in pendingRequests.ToList())
-                {
-                    if(pendingRequest == null)
-                    {
-                        log.Write(LogVerbosity.Warning, "pendingRequest is null");
-                        pendingRequests.Remove(pendingRequest);
-                    }
-
-                    if (pendingRequest.Check(tokenData))
-                    {
-                        pendingRequests.Remove(pendingRequest);
+                    pendingRequests.Remove(pendingRequest);
+                    if (!socketClient.ContinueOnQueryResponse)
                         return;
-                    }
-                }
-
-                if (!HandleData(tokenData))
-                {
-                    log.Write(LogVerbosity.Debug, "Message not handled: " + tokenData);
+                    handledResponse = true;
+                    break;
                 }
             }
-            catch(Exception exc)
+            
+            if (!HandleData(tokenData) && !handledResponse)
             {
-                log.Write(LogVerbosity.Error, $"Error occured while processing message: " + exc.Message);
+                log.Write(LogVerbosity.Debug, "Message not handled: " + tokenData);
             }
-        }
+            }
+            log.Write(LogVerbosity.Debug, $"Socket {Socket.Id} received data: " + data);
+            var tokenData = data.ToJToken(log);
+            if (tokenData == null)
+                return;
+
+            var handledResponse = false;
+            foreach (var pendingRequest in pendingRequests.ToList())
+                    pendingRequests.Remove(pendingRequest);
+                    if (!socketClient.ContinueOnQueryResponse)
+                        return;
+                    handledResponse = true;
+                    break;
+            
+            if (!HandleData(tokenData) && !handledResponse)
 
         private bool HandleData(JToken tokenData)
         {
@@ -178,6 +227,14 @@ namespace CryptoExchange.Net.Sockets
             }
         }
 
+        /// <summary>
+        /// Send data
+        /// </summary>
+        /// <typeparam name="T">The data type</typeparam>
+        /// <param name="obj">The object to send</param>
+        /// <param name="timeout">The timeout for response</param>
+        /// <param name="handler">The response handler</param>
+        /// <returns></returns>
         public virtual Task SendAndWait<T>(T obj, TimeSpan timeout, Func<JToken, bool> handler)
         {
             var pending = new PendingRequest(handler, timeout);
@@ -252,7 +309,7 @@ namespace CryptoExchange.Net.Sockets
                             if (lostTriggered)
                             {
                                 lostTriggered = false;
-                                Task.Run(() => ConnectionRestored?.Invoke(DisconnectTime.HasValue ? DateTime.UtcNow - DisconnectTime.Value : TimeSpan.FromSeconds(0)));
+                                InvokeConnectionRestored();
                             }
 
                             break;
@@ -265,12 +322,20 @@ namespace CryptoExchange.Net.Sockets
             else
             {
                 log.Write(LogVerbosity.Info, $"Socket {Socket.Id} closed");
+                if (socketClient.sockets.ContainsKey(Socket.Id))
+                    socketClient.sockets.TryRemove(Socket.Id, out _);
+
                 Socket.Dispose();
                 Closed?.Invoke();
             }
         }
 
-        public async Task<bool> ProcessReconnect()
+        private async void InvokeConnectionRestored()
+        {
+            await Task.Run(() => ConnectionRestored?.Invoke(DisconnectTime.HasValue ? DateTime.UtcNow - DisconnectTime.Value : TimeSpan.FromSeconds(0))).ConfigureAwait(false);
+        }
+
+        private async Task<bool> ProcessReconnect()
         {
             if (Authenticated)
             {
@@ -287,20 +352,34 @@ namespace CryptoExchange.Net.Sockets
             List<SocketSubscription> handlerList;
             lock (handlersLock)
                 handlerList = handlers.Where(h => h.Request != null).ToList();
+
+            var success = true;
+            var taskList = new List<Task>();
             foreach (var handler in handlerList)
             {
-                var resubResult = await socketClient.SubscribeAndWait(this, handler.Request, handler).ConfigureAwait(false);
-                if (!resubResult.Success)
+                var task = socketClient.SubscribeAndWait(this, handler.Request, handler).ContinueWith(t =>
                 {
-                    log.Write(LogVerbosity.Debug, "Resubscribing all subscriptions failed on reconnected socket. Disconnecting and reconnecting.");
-                    return false;
-                }
+                    if (!t.Result.Success)
+                        success = false;
+                });
+                taskList.Add(task);
+            }
+
+            Task.WaitAll(taskList.ToArray());
+            if (!success)
+            {
+                log.Write(LogVerbosity.Debug, "Resubscribing all subscriptions failed on reconnected socket. Disconnecting and reconnecting.");
+                return false;
             }
 
             log.Write(LogVerbosity.Debug, "All subscription successfully resubscribed on reconnected socket.");
             return true;
         }
         
+        /// <summary>
+        /// Close the connection
+        /// </summary>
+        /// <returns></returns>
         public async Task Close()
         {
             Connected = false;
@@ -312,6 +391,11 @@ namespace CryptoExchange.Net.Sockets
             Socket.Dispose();
         }
 
+        /// <summary>
+        /// Close the subscription
+        /// </summary>
+        /// <param name="subscription">Subscription to close</param>
+        /// <returns></returns>
         public async Task Close(SocketSubscription subscription)
         {
             if (subscription.Confirmed)
@@ -330,7 +414,7 @@ namespace CryptoExchange.Net.Sockets
         }
     }
 
-    public class PendingRequest
+    internal class PendingRequest
     {
         public Func<JToken, bool> Handler { get; }
         public JToken Result { get; private set; }
