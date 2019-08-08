@@ -160,27 +160,12 @@ namespace CryptoExchange.Net.Sockets
                     break;
                 }
             }
-            
+
             if (!HandleData(tokenData) && !handledResponse)
             {
                 log.Write(LogVerbosity.Debug, "Message not handled: " + tokenData);
             }
-            }
-            log.Write(LogVerbosity.Debug, $"Socket {Socket.Id} received data: " + data);
-            var tokenData = data.ToJToken(log);
-            if (tokenData == null)
-                return;
-
-            var handledResponse = false;
-            foreach (var pendingRequest in pendingRequests.ToList())
-                    pendingRequests.Remove(pendingRequest);
-                    if (!socketClient.ContinueOnQueryResponse)
-                        return;
-                    handledResponse = true;
-                    break;
-            
-            if (!HandleData(tokenData) && !handledResponse)
-
+        }
         private bool HandleData(JToken tokenData)
         {
             SocketSubscription currentSubscription = null;
