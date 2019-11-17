@@ -5,7 +5,7 @@
   <PropertyGroup>
     <PackageId>Broker.CryptoExchange.Net</PackageId>
     <Authors>JKorf</Authors>
-    <PackageVersion>3.0.1</PackageVersion>
+    <PackageVersion>3.0.1.1</PackageVersion>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
     <PackageProjectUrl>https://github.com/JKorf/CryptoExchange.Net</PackageProjectUrl>
     <NeutralLanguage>en</NeutralLanguage>
