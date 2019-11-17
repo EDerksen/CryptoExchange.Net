@@ -3,6 +3,9 @@ using System.Security;
 
 namespace CryptoExchange.Net.Authentication
 {
+    /// <summary>
+    /// Private key info
+    /// </summary>
     public class PrivateKey : IDisposable
     {
         /// <summary>
@@ -13,7 +16,7 @@ namespace CryptoExchange.Net.Authentication
         /// <summary>
         /// The private key's pass phrase
         /// </summary>
-        public SecureString Passphrase { get; }
+        public SecureString? Passphrase { get; }
 
         /// <summary>
         /// Indicates if the private key is encrypted or not
@@ -78,15 +81,26 @@ namespace CryptoExchange.Net.Authentication
             if (string.IsNullOrEmpty(key))
                 throw new ArgumentException("Key can't be null/empty");
 
-            var secureKey = new SecureString();
-            foreach (var c in key)
-                secureKey.AppendChar(c);
-            secureKey.MakeReadOnly();
-            Key = secureKey;
+            Key = key.ToSecureString();
 
             IsEncrypted = false;
         }
 
+        /// <summary>
+        /// Copy the private key
+        /// </summary>
+        /// <returns></returns>
+        public PrivateKey Copy()
+        {
+            if (Passphrase == null)
+                return new PrivateKey(Key.GetString());
+            else
+                return new PrivateKey(Key.GetString(), Passphrase.GetString());
+        }
+
+        /// <summary>
+        /// Dispose
+        /// </summary>
         public void Dispose()
         {
             Key?.Dispose();

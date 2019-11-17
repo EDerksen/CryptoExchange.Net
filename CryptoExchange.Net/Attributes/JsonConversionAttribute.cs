@@ -3,9 +3,9 @@
 namespace CryptoExchange.Net.Attributes
 {
     /// <summary>
-    /// Marks property as optional
+    /// Used for conversion in ArrayConverter
     /// </summary>
-    public class JsonOptionalPropertyAttribute : Attribute
+    public class JsonConversionAttribute: Attribute
     {
     }
 }
