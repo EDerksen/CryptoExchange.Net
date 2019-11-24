@@ -22,6 +22,6 @@ namespace CryptoExchange.Net.Interfaces
         /// </summary>
         /// <param name="requestTimeout">Request timeout to use</param>
         /// <param name="proxy">Proxy settings to use</param>
-        void Configure(TimeSpan requestTimeout, ApiProxy? proxy);
+        void Configure(TimeSpan requestTimeout, ApiProxy? proxy, HttpClient httpClient);
     }
 }

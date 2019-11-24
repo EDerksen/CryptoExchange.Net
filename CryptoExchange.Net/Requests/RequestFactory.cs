@@ -14,18 +14,25 @@ namespace CryptoExchange.Net.Requests
         private HttpClient? httpClient;
 
         /// <inheritdoc />
-        public void Configure(TimeSpan requestTimeout, ApiProxy? proxy)
+        public void Configure(TimeSpan requestTimeout, ApiProxy? proxy, HttpClient httpClient)
         {
-            HttpMessageHandler handler = new HttpClientHandler()
+            if(httpClient != null)
             {
-                Proxy = proxy == null ? null : new WebProxy
+                this.httpClient = httpClient;
+            }
+            else
+            {
+                HttpMessageHandler handler = new HttpClientHandler()
                 {
-                    Address = new Uri($"{proxy.Host}:{proxy.Port}"),
-                    Credentials = proxy.Password == null ? null : new NetworkCredential(proxy.Login, proxy.Password)
-                }
-            };
+                    Proxy = proxy == null ? null : new WebProxy
+                    {
+                        Address = new Uri($"{proxy.Host}:{proxy.Port}"),
+                        Credentials = proxy.Password == null ? null : new NetworkCredential(proxy.Login, proxy.Password)
+                    }
+                };
 
-            httpClient = new HttpClient(handler) {Timeout = requestTimeout};
+                this.httpClient = new HttpClient(handler) { Timeout = requestTimeout };
+            }
         }
 
         /// <inheritdoc />

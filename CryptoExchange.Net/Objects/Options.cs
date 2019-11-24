@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Net.Http;
 using CryptoExchange.Net.Authentication;
 using CryptoExchange.Net.Interfaces;
 using CryptoExchange.Net.Logging;
@@ -103,6 +104,8 @@ namespace CryptoExchange.Net.Objects
     /// </summary>
     public class RestClientOptions : ClientOptions
     {
+        public HttpClient HttpClient { get; set; }
+
         /// <summary>
         /// List of rate limiters to use
         /// </summary>
