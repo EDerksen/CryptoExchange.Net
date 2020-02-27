@@ -161,6 +161,11 @@ namespace CryptoExchange.Net
                     semaphoreSlim.Release();
             }
 
+            if (socket.PausedActivity)
+            {
+                log.Write(LogVerbosity.Info, "Socket has been paused, can't subscribe at this moment");
+                return new CallResult<UpdateSubscription>(default, new ServerError("Socket is paused"));
+            }
 
             if (request != null)
             {
@@ -552,7 +557,7 @@ namespace CryptoExchange.Net
         {
             log.Write(LogVerbosity.Debug, $"Closing all {sockets.Sum(s => s.Value.HandlerCount)} subscriptions");
 
-            await Task.Run(() =>
+            await Task.Run(async () =>
             {
                 var tasks = new List<Task>();
                 {
@@ -561,7 +566,7 @@ namespace CryptoExchange.Net
                         tasks.Add(sub.Close());
                 }
 
-                Task.WaitAll(tasks.ToArray());
+                await Task.WhenAll(tasks.ToArray()).ConfigureAwait(false);
             }).ConfigureAwait(false);
         }
 
