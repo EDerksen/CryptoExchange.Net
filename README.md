@@ -194,6 +194,18 @@ The order book will automatically reconnect when the connection is lost and resy
 To stop synchronizing an order book use the `Stop` method.
 
 ## Release notes
+* Version 3.0.5 - 05 Feb 2020
+    * Added PausedActivity events on socket subscriptions
+
+* Version 3.0.4 - 29 Jan 2020
+	* Removed unnecessary json serialization
+
+* Version 3.0.3 - 23 Jan 2020
+    * Added OnBestOffersChanged event to order book implementations
+
+* Version 3.0.2 - 10 Dec 2019
+    * Removed invalid check for unauthenticated proxy
+
 * Version 3.0.1 - 14 Nov 2019
     * Re-enabled debug response logging
 
