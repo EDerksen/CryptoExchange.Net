@@ -837,6 +837,11 @@
             The best ask currently in the order book
             </summary>
         </member>
+        <member name="P:CryptoExchange.Net.Interfaces.ISymbolOrderBook.BestOffers">
+            <summary>
+            BestBid/BesAsk returned as a pair
+            </summary>
+        </member>
         <member name="M:CryptoExchange.Net.Interfaces.ISymbolOrderBook.Start">
             <summary>
             Start connecting and synchronizing the order book
@@ -1144,7 +1149,6 @@
             <param name="port">The proxy port</param>
         </member>
         <member name="M:CryptoExchange.Net.Objects.ApiProxy.#ctor(System.String,System.Int32,System.String,System.String)">
-            <inheritdoc />
             <summary>
             Create new settings for a proxy
             </summary>
@@ -1154,7 +1158,6 @@
             <param name="password">The proxy password</param>
         </member>
         <member name="M:CryptoExchange.Net.Objects.ApiProxy.#ctor(System.String,System.Int32,System.String,System.Security.SecureString)">
-            <inheritdoc />
             <summary>
             Create new settings for a proxy
             </summary>
@@ -1817,6 +1820,11 @@
         <member name="P:CryptoExchange.Net.OrderBook.SymbolOrderBook.BestAsk">
             <summary>
             The best ask currently in the order book
+            </summary>
+        </member>
+        <member name="P:CryptoExchange.Net.OrderBook.SymbolOrderBook.BestOffers">
+            <summary>
+            BestBid/BesAsk returned as a pair
             </summary>
         </member>
         <member name="M:CryptoExchange.Net.OrderBook.SymbolOrderBook.#ctor(System.String,CryptoExchange.Net.Objects.OrderBookOptions)">
